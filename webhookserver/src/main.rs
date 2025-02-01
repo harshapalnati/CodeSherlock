@@ -80,8 +80,14 @@ async fn post_pr_comment(repo: &str, pr_number: i64, filename: &str, comment: St
         .send()
         .await?;
 
+    let status = response.status();
     let response_text = response.text().await?;
-    println!("🔍 GitHub API Response: {}", response_text);
+
+    println!("🔍 GitHub API Response: Status: {}, Body: {}", status, response_text);
+
+    if status != reqwest::StatusCode::CREATED {
+        println!("❌ GitHub API Error: {}", response_text);
+    }
 
     Ok(())
 }
