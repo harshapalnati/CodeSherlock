@@ -7,3 +7,6 @@ FwegfGGERFG
 wfwefgefEG
 asFsafgesfadrgdsf
 sfafsgesgfdgfs
+
+
+tesuitng this again for causew i dk if the ai is working
