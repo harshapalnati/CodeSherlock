@@ -44,6 +44,8 @@ async fn analyze_pr_with_gpt(repo: &str, pr_number: i64) -> Result<(), reqwest::
         .json::<Value>()
         .await?;
 
+        println!("✅ AI Review Comment Response: {}", response_text);
+
     for file in response.as_array().unwrap_or(&vec![]) {
         if let Some(filename) = file["filename"].as_str() {
             if let Some(patch) = file["patch"].as_str() {
