@@ -6,13 +6,13 @@ use dotenv::dotenv;
 
 #[post("/webhook")]
 async fn github_webhook(payload: web::Json<Value>) -> impl Responder {
-    println!("✅ Received GitHub Webhook Event: {:?}", payload);
+   // println!("✅ Received GitHub Webhook Event: {:?}", payload);
 
     if let Some(action) = payload["action"].as_str() {
         if action == "opened" || action == "synchronize" {
             if let Some(pr_number) = payload["pull_request"]["number"].as_i64() {
                 if let Some(repo) = payload["repository"]["full_name"].as_str() {
-                    println!("📌 Processing PR #{} in {}", pr_number, repo);
+                     //println!("📌 Processing PR #{} in {}", pr_number, repo);
 
                     // Fetch PR Code Changes & Analyze with GPT-4
                     match analyze_pr_with_gpt(repo, pr_number).await {
@@ -44,6 +44,8 @@ async fn analyze_pr_with_gpt(repo: &str, pr_number: i64) -> Result<(), reqwest::
         .json::<Value>()
         .await?;
 
+        println!("✅ AI Review Comment Response: {}", response_text);
+
     for file in response.as_array().unwrap_or(&vec![]) {
         if let Some(filename) = file["filename"].as_str() {
             if let Some(patch) = file["patch"].as_str() {
@@ -51,7 +53,7 @@ async fn analyze_pr_with_gpt(repo: &str, pr_number: i64) -> Result<(), reqwest::
 
                 // Step 2: Send to GPT-4 for Code Review
                 let ai_comment = get_gpt4_analysis(filename, patch, &openai_key).await?;
-
+                println!("🔍 AI Comment: {}", ai_comment);
                 // Step 3: Post AI Comment on GitHub
                 post_pr_comment(repo, pr_number, filename, ai_comment).await?;
             }
