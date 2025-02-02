@@ -1,0 +1,42 @@
+# === Stage 1: Build Stage ===
+FROM rust:1.75 AS builder
+
+# Set working directory
+WORKDIR /app
+
+# Copy Cargo files for caching dependencies
+COPY Cargo.toml Cargo.lock ./
+
+# Create a dummy main.rs to cache dependencies
+RUN mkdir -p src && echo "fn main() {}" > src/main.rs
+
+# Build dependencies only (for caching)
+RUN cargo build --release && rm -rf src
+
+# Copy actual source code
+COPY . .
+
+# Build the actual project
+RUN cargo build --release
+
+# === Stage 2: Runtime Stage ===
+FROM debian:bullseye-slim AS runtime
+
+# Install required dependencies
+RUN apt-get update && apt-get install -y libssl-dev ca-certificates && rm -rf /var/lib/apt/lists/*
+
+# Set working directory
+WORKDIR /app
+
+# Copy compiled binary from build stage
+COPY --from=builder /app/target/release/webhookserver /app/webhookserver
+
+# Expose port for webhook listening
+EXPOSE 3000
+
+# Define environment variables (override in runtime)
+ENV GITHUB_TOKEN=""
+ENV OPENAI_API_KEY=""
+
+# Start the webhook server
+CMD ["/app/webhookserver"]
