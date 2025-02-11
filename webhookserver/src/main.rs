@@ -92,6 +92,46 @@ async fn post_pr_comment(repo: &str, pr_number: i64, filename: &str, comment: St
     Ok(())
 }
 
+async fn generate_commit_analysis(changed_files: &[String]) -> Result<(String, Vec<String>, Vec<String>), reqwest::Error> {
+    let openai_key = env::var("OPENAI_API_KEY").expect("⚠️ OPENAI_API_KEY not set");
+
+    let prompt = format!(
+        "Analyze the following changed files:\n\n{}\n\n1. Generate a meaningful Git commit message.\n2. Generate missing docstrings.\n3. Suggest relevant test cases.",
+        changed_files.join("\n")
+    );
+
+    let client = Client::new();
+    let payload = serde_json::json!({
+        "model": "gpt-4",
+        "messages": [{"role": "user", "content": prompt}],
+        "max_tokens": 500,
+        "temperature": 0.5
+    });
+
+    let response = client
+        .post("https://api.openai.com/v1/chat/completions")
+        .header("Authorization", format!("Bearer {}", openai_key))
+        .header("Content-Type", "application/json")
+        .json(&payload)
+        .send()
+        .await?
+        .json::<Value>()
+        .await?;
+
+    let ai_response = response["choices"][0]["message"]["content"]
+        .as_str()
+        .unwrap_or("No AI feedback available.")
+        .to_string();
+
+    let parts: Vec<&str> = ai_response.split("\n\n").collect();
+    let commit_message = parts.get(0).unwrap_or(&"Commit message not generated").to_string();
+    let docstrings = parts.get(1).map(|s| vec![s.to_string()]).unwrap_or_else(Vec::new);
+    let test_cases = parts.get(2).map(|s| vec![s.to_string()]).unwrap_or_else(Vec::new);
+
+    Ok((commit_message, docstrings, test_cases))
+}
+
+
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     dotenv().ok();
