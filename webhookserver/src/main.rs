@@ -26,7 +26,29 @@ async fn github_webhook(payload: web::Json<Value>) -> impl Responder {
 
     HttpResponse::Ok().body("Webhook received")
 }
+  async fn analyze_commit(&self, request: Request<CommitRequest>) -> Result<Response<CommitResponse>, Status> {
+        let req = request.into_inner();
+        println!("🔄 Processing Commit for Repository: {}", req.repository);
 
+        match generate_commit_analysis(&req.changed_files).await {
+            Ok((commit_message, docstrings, test_cases)) => {
+                println!("✅ AI Generated Commit Message: {}", commit_message);
+
+                let response = CommitResponse {
+                    commit_message,
+                    docstrings,
+                    test_cases,
+                };
+
+                Ok(Response::new(response))
+            }
+            Err(e) => {
+                eprintln!("❌ Failed to generate commit analysis: {}", e);
+                Err(Status::internal("Commit analysis failed"))
+            }
+        }
+    }
+}
 // Function to fetch PR file changes & post comments
 async fn analyze_pr_and_comment(repo: &str, pr_number: i64) -> Result<(), reqwest::Error> {
     let github_token = env::var("GITHUB_TOKEN").expect("⚠️ GITHUB_TOKEN not set in .env");
