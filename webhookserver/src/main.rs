@@ -104,3 +104,27 @@ async fn main() -> std::io::Result<()> {
         .run()
         .await
 }
+
+
+async fn analyze_commit(&self, request: Request<CommitRequest>) -> Result<Response<CommitResponse>, Status> {
+        let req = request.into_inner();
+        println!("🔄 Processing Commit for Repository: {}", req.repository);
+
+        match generate_commit_analysis(&req.changed_files).await {
+            Ok((commit_message, docstrings, test_cases)) => {
+                println!("✅ AI Generated Commit Message: {}", commit_message);
+
+                let response = CommitResponse {
+                    commit_message,
+                    docstrings,
+                    test_cases,
+                };
+
+                Ok(Response::new(response))
+            }
+            Err(e) => {
+                eprintln!("❌ Failed to generate commit analysis: {}", e);
+                Err(Status::internal("Commit analysis failed"))
+            }
+        }
+    }
